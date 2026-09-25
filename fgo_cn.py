@@ -251,9 +251,10 @@ def _next_usk(seed: str) -> str:
 
 
 def _purchase_result(payload: dict[str, Any]) -> dict[str, Any]:
-    """解析 shoppurchase 响应。"""
-    for item in payload.get("response") or []:
-        if isinstance(item, dict) and item.get("nid") == "purchase":
+    """解析 shoppurchase 响应 (错误响应 nid 可能不是 purchase, 实测为 "0")。"""
+    items = [x for x in payload.get("response") or [] if isinstance(x, dict)]
+    for item in items:
+        if item.get("nid") == "purchase":
             code = str(item.get("resCode", ""))
             success = item.get("success") or {}
             return {
@@ -263,8 +264,15 @@ def _purchase_result(payload: dict[str, Any]) -> dict[str, Any]:
                 "num": int(success.get("PurchaseNum") or 0),
                 "fail": item.get("fail") or {},
             }
+    for item in items:
+        code = str(item.get("resCode", ""))
+        if code not in ("", "00"):
+            fail = item.get("fail") or {}
+            detail = " ".join(str(fail.get("detail") or fail.get("message") or "").split())
+            return {"ok": False, "code": code, "name": "", "num": 0,
+                    "fail": detail or fail or "未知错误"}
     return {"ok": False, "code": "missing", "name": "", "num": 0,
-            "fail": "响应中找不到 purchase"}
+            "fail": "响应中找不到结果"}
 
 
 def fetch_game_top() -> dict[str, Any]:
@@ -413,6 +421,8 @@ def toplogin(access_token: str, mid: int, username: str, nickname: str,
         if seed:
             usk = _next_usk(seed)
         apple = {"requested": apple_num, "converted": 0, "name": "", "errors": []}
+        if not seed:
+            log_cb("提示: toplogin 响应未含 usk 种子, 尝试沿用当前 usk")
         for _ in range(apple_num):
             client_local = time.monotonic() - app_start
             buy_url = (f"{host}/rongame_beta/rgfate/60_1001/ac.php"
@@ -429,6 +439,8 @@ def toplogin(access_token: str, mid: int, username: str, nickname: str,
             buy_payload = parse_fgo_payload(post(buy_url, buy).text)
             result = _purchase_result(buy_payload)
             if not result["ok"]:
+                log_cb("合成响应诊断: " + json.dumps(
+                    buy_payload.get("response"), ensure_ascii=False)[:500])
                 apple["errors"].append(f"resCode={result['code']} {result['fail']}")
                 break
             apple["converted"] += 1

@@ -1,0 +1,7 @@
+venv/
+auth.json
+updated_auth.json
+pending_qr.json
+qr.png
+__pycache__/
+*.pyc

@@ -1,0 +1,31 @@
+name: FGO B服每日签到
+
+on:
+  schedule:
+    # 每天北京时间 01:05 (UTC 17:05) 运行
+    - cron: '5 17 * * *'
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  checkin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests pynacl
+
+      - name: FGO daily check-in
+        run: python checkin.py
+        env:
+          FGO_AUTH_JSON: ${{ secrets.FGO_AUTH_JSON }}
+
+      - name: Sync refreshed token back to repo secret
+        if: always()
+        run: python update_secret.py
+        env:
+          FGO_UPDATE_PAT: ${{ secrets.FGO_UPDATE_PAT }}

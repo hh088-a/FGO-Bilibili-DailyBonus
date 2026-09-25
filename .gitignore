@@ -5,3 +5,6 @@ pending_qr.json
 qr.png
 __pycache__/
 *.pyc
+*.log
+captured_keys.log
+mitm_*.log

@@ -23,6 +23,8 @@ jobs:
         run: python checkin.py
         env:
           FGO_AUTH_JSON: ${{ secrets.FGO_AUTH_JSON }}
+          # 每次运行自动合成的青铜果实数量 (0=关闭); 在仓库 Settings > Variables 设置
+          FGO_APPLE_NUM: ${{ vars.FGO_APPLE_NUM || '0' }}
 
       - name: Sync refreshed token back to repo secret
         if: always()

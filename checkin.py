@@ -87,6 +87,11 @@ def main() -> int:
         print(f"找不到 {AUTH_FILE} 且未设置 FGO_AUTH_JSON, 请先运行  python login_qr.py  扫码登录")
         return 1
 
+    try:
+        apple_num = max(0, int(os.environ.get("FGO_APPLE_NUM") or 0))
+    except ValueError:
+        apple_num = 0
+
     changed = False
     remaining = int(auth.get("expires_at") or 0) - time.time()
 
@@ -108,13 +113,14 @@ def main() -> int:
         print(f"token 剩余有效期 {remaining / 86400:.0f} 天")
 
     try:
-        payload = fgo_cn.toplogin(
+        payload, apple = fgo_cn.toplogin(
             access_token=auth["access_token"],
             mid=int(auth["mid"]),
             username=auth.get("username") or "master",
             nickname=auth["nickname"],
             device_id=auth["device_id"],
             platform_id=auth.get("platform", "android_bili"),
+            apple_num=apple_num,
         )
     except fgo_cn.FgoError as exc:
         print(f"\n签到失败: {exc}")
@@ -128,6 +134,11 @@ def main() -> int:
 
     print("\n===== 签到成功 =====")
     print(summarize(payload))
+    if apple is not None:
+        if apple["converted"]:
+            print(f"苹果合成: {apple['converted']}/{apple['requested']} 个 ({apple['name']})")
+        else:
+            print(f"苹果合成: 未完成 ({'; '.join(apple['errors']) or '未知原因'})")
     return 0
 
 

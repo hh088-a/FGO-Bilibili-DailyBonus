@@ -9,6 +9,7 @@
 ## ✨ 特性
 
 - 🗓️ **每日自动签到**：通过 GitHub Actions 定时执行 `toplogin`，无需自己的服务器，无需电脑开机
+- 🍎 **自动苹果合成**（可选）：每次运行顺带把 AP 换成青铜果实（树苗 + 40AP），设置仓库 Variable `FGO_APPLE_NUM` 即可开启
 - 🔄 **token 自动续期**：B站 access_token 有效期 180 天，剩余不足 30 天时自动刷新并回写仓库 Secrets，**一次扫码，长期免维护**
 - 📊 **签到报告**：输出御主等级、圣晶石、呼符、连续/累计登录天数、当日签到奖励明细
 - 📱 **双平台**：支持安卓 B服、iOS B服
@@ -22,6 +23,7 @@ FGO 国服使用B站账号体系登录，签到链路为：
 B站App扫码 → 获取 OAuth access_token
     → member (gamedata) → logintomembercenter (B站授权校验)
     → login (建立游戏会话) → toplogin ← 这一步即每日签到
+                            → (可选) shoppurchase ← AP→青铜果实 合成
 ```
 
 > 本项目灵感来自日服签到脚本 [hexstr/FGODailyBonus](https://github.com/hexstr/FGODailyBonus)。
@@ -56,6 +58,8 @@ python login_qr.py run "你的FGO御主名"
 | `FGO_AUTH_JSON` | `auth.json` 文件的**全部内容** | B站登录凭据 |
 | `FGO_UPDATE_PAT` | [创建链接](https://github.com/settings/tokens) | classic PAT，勾选 `repo` 权限，用于 token 续期后自动回写 Secrets |
 
+> **（可选）开启自动苹果合成**：同页面切到 **Variables** 标签 → **New repository variable**，添加 `FGO_APPLE_NUM` = 每次运行合成的数量（如 `1`）。不设置或设为 `0` = 关闭。
+
 ### 4. 启用 Actions 并验证
 
 进入你 Fork 的仓库 → **Actions** → 启用 → 选择 `FGO B服每日签到` → **Run workflow** 手动触发一次，确认日志输出 `签到成功`。
@@ -75,6 +79,8 @@ python checkin.py
 ```
 
 配合 **Windows 任务计划程序**每天定时执行即可。本地运行使用国内 IP，相比 GitHub Actions 的海外 IP 更不容易触发风控。
+
+本地想顺便合成苹果：`FGO_APPLE_NUM=1 python checkin.py`（Windows PowerShell 写法：`$env:FGO_APPLE_NUM="1"; python checkin.py`）。
 
 ## 🔄 token 自动续期说明
 
@@ -96,6 +102,9 @@ A: 扫码时加个 `ios` 参数即可：`python login_qr.py run "御主名" ios`
 
 **Q: 签到日志里没有奖励明细？**
 A: 说明当天已经登录过游戏（奖励每天只能领一次），属于正常现象，第二天再看。
+
+**Q: 自动苹果合成消耗什么？会失败吗？**
+A: 每个果实消耗 1 个树苗 + 40 AP。AP 或树苗不足时服务器返回错误，脚本会提示"未完成"但**不影响签到结果**。数量由 `FGO_APPLE_NUM` 控制，删除该 Variable 即关闭。
 
 **Q: 会封号吗？**
 A: 无法承诺。第三方模拟客户端登录存在触发风控/违反用户协议的可能，请仅用于自己的账号并自行评估风险。

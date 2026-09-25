@@ -39,6 +39,7 @@ DEVELOPMENT_AUTH_CODE = "aK8mTxBJCwZyxBjNJSKA5xCWL7zKtgZEQNiZmffXUbyQd5aLun"
 FUNNY_KEY = "B5UI78B3486A7B48IB9AUF8E8P97CPI9"
 DEFAULT_UNITY = "2022.3.62f2"
 TIMEOUT = (12, 35)
+APPLE_SHOP_ID = 13000000  # 主界面 AP 加号: 树苗+40AP -> 青铜果实 (shoppurchase)
 
 PLATFORMS: dict[str, dict[str, Any]] = {
     "android_bili": {
@@ -232,6 +233,40 @@ def response_detail(payload: dict[str, Any], nid: str) -> dict[str, Any]:
     raise FgoError(f"FGO 响应中找不到 {nid!r}, error_codes={errors}")
 
 
+def _response_usk(payload: dict[str, Any]) -> str | None:
+    """从 ac.php 响应提取下一轮会话种子 (response[].usk 或 userGame.usk)。"""
+    for item in payload.get("response") or []:
+        if isinstance(item, dict) and item.get("usk"):
+            return str(item["usk"])
+    updated = (payload.get("cache") or {}).get("updated") or {}
+    for game in updated.get("userGame") or []:
+        if isinstance(game, dict) and game.get("usk"):
+            return str(game["usk"])
+    return None
+
+
+def _next_usk(seed: str) -> str:
+    """会话种子 -> 下一次请求的 usk (与 sgusk->usk 同一公式)。"""
+    return hashlib.md5((FUNNY_KEY + seed).encode("utf-8")).hexdigest()
+
+
+def _purchase_result(payload: dict[str, Any]) -> dict[str, Any]:
+    """解析 shoppurchase 响应。"""
+    for item in payload.get("response") or []:
+        if isinstance(item, dict) and item.get("nid") == "purchase":
+            code = str(item.get("resCode", ""))
+            success = item.get("success") or {}
+            return {
+                "ok": code in ("", "00"),
+                "code": code,
+                "name": str(success.get("purchaseName") or ""),
+                "num": int(success.get("PurchaseNum") or 0),
+                "fail": item.get("fail") or {},
+            }
+    return {"ok": False, "code": "missing", "name": "", "num": 0,
+            "fail": "响应中找不到 purchase"}
+
+
 def fetch_game_top() -> dict[str, Any]:
     last_exc: Exception | None = None
     for url in CHALDEA_GAMETOP_URLS:
@@ -271,8 +306,8 @@ def _game_headers(unity_ver: str, platform: dict[str, Any]) -> dict[str, str]:
 
 def toplogin(access_token: str, mid: int, username: str, nickname: str,
              device_id: str, platform_id: str = "android_bili",
-             log_cb=print) -> dict[str, Any]:
-    """执行完整登录链, 返回 toplogin 响应 payload (含签到奖励信息)。"""
+             apple_num: int = 0, log_cb=print) -> tuple[dict[str, Any], dict[str, Any] | None]:
+    """执行完整登录链, 返回 (toplogin 响应 payload, 苹果合成结果 apple_num=0 时为 None)。"""
     platform = PLATFORMS[platform_id]
     cn = fetch_game_top()
     app_ver = str(cn.get("appVer") or "").strip()
@@ -369,4 +404,41 @@ def toplogin(access_token: str, mid: int, username: str, nickname: str,
     payload = parse_fgo_payload(post(url, form).text)
     response_detail(payload, "login")
     log_cb("TopLogin 完成")
-    return payload
+
+    # 5/5 可选: AP -> 青铜果实 合成 (树苗+40AP, usk 每次响应轮换)
+    apple: dict[str, Any] | None = None
+    if apple_num > 0:
+        log_cb(f"苹果合成 ×{apple_num}…")
+        seed = _response_usk(payload)
+        if seed:
+            usk = _next_usk(seed)
+        apple = {"requested": apple_num, "converted": 0, "name": "", "errors": []}
+        for _ in range(apple_num):
+            client_local = time.monotonic() - app_start
+            buy_url = (f"{host}/rongame_beta/rgfate/60_1001/ac.php"
+                       f"?_userId={sguid}&_key=shoppurchase&_clientLocalTime={client_local:.5f}")
+            buy = OrderedDict([
+                ("ac", "action"), ("key", "shoppurchase"), ("deviceid", device_id),
+                ("os", os_name), ("ptype", ptype), ("usk", usk), ("umk", ""),
+                ("rgsid", 1001), ("rkchannel", rkchannel), ("cPlat", cplat), ("uPlat", uplat),
+                ("userId", sguid), ("appVer", app_ver), ("dateVer", date_ver),
+                ("lastAccessTime", int(time.time())), ("developmentAuthCode", DEVELOPMENT_AUTH_CODE),
+                ("idempotencyKey", str(uuid.uuid4())), ("userAgent", 1), ("dataVer", data_ver),
+                ("id", APPLE_SHOP_ID), ("num", 1),
+            ])
+            buy_payload = parse_fgo_payload(post(buy_url, buy).text)
+            result = _purchase_result(buy_payload)
+            if not result["ok"]:
+                apple["errors"].append(f"resCode={result['code']} {result['fail']}")
+                break
+            apple["converted"] += 1
+            apple["name"] = result["name"] or apple["name"]
+            next_seed = _response_usk(buy_payload)
+            if next_seed:
+                usk = _next_usk(next_seed)
+            time.sleep(1.5)
+        if apple["converted"]:
+            log_cb(f"苹果合成完成: {apple['converted']}/{apple_num}")
+        else:
+            log_cb(f"苹果合成未完成: {'; '.join(apple['errors']) or '未知'}")
+    return payload, apple

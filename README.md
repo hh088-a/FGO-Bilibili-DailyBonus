@@ -92,7 +92,7 @@ A: GitHub Actions 服务器在海外，B站可能对异地登录风控。建议�
 A: 重新执行 `python login_qr.py run "御主名"` 扫码，把新的 `auth.json` 内容更新到 Secret `FGO_AUTH_JSON`。
 
 **Q: iOS B服怎么用？**
-A: 流程相同，扫码生成 `auth.json` 后，把文件里 `"platform"` 的值改为 `"ios_bili"` 再设置到 Secrets。
+A: 扫码时加个 `ios` 参数即可：`python login_qr.py run "御主名" ios`，其余流程完全相同。
 
 **Q: 签到日志里没有奖励明细？**
 A: 说明当天已经登录过游戏（奖励每天只能领一次），属于正常现象，第二天再看。

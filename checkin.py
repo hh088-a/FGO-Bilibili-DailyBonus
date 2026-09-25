@@ -91,10 +91,14 @@ def main() -> int:
         apple_num = max(0, int(os.environ.get("FGO_APPLE_NUM") or 0))
     except ValueError:
         apple_num = 0
-    try:
-        apple_min_ap = max(0, int(os.environ.get("FGO_APPLE_AP_MIN") or 120))
-    except ValueError:
-        apple_min_ap = 120
+    raw_min_ap = (os.environ.get("FGO_APPLE_AP_MIN") or "120").strip().lower()
+    if raw_min_ap in ("max", "full", "满"):
+        apple_min_ap = -1  # -1 = AP 满了才合成
+    else:
+        try:
+            apple_min_ap = max(0, int(raw_min_ap))
+        except ValueError:
+            apple_min_ap = 120
 
     changed = False
     remaining = int(auth.get("expires_at") or 0) - time.time()

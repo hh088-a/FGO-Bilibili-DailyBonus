@@ -453,11 +453,15 @@ def toplogin(access_token: str, mid: int, username: str, nickname: str,
         except FgoError as exc:
             log_cb(f"AP 检测失败: {exc}")
             st = None
-        if st is not None and apple_min_ap > 0 and st["ap"] < apple_min_ap:
-            apple["errors"].append(f"AP={st['ap']} < {apple_min_ap}, 未达合成阈值")
-            if st["ap"] < st["act_max"]:
-                apple["eta_seconds"] = (apple_min_ap - st["ap"]) * AP_RECOVER_SECONDS
-            log_cb(f"苹果合成跳过: AP={st['ap']} < {apple_min_ap}")
+        # apple_min_ap < 0 表示"AP 满了才合成" (阈值 = actMax, 等级提升后自适应)
+        threshold = (st["act_max"] if apple_min_ap < 0 else apple_min_ap) if st else 0
+        if threshold > 0 and (st is None or st["ap"] < threshold):
+            reason = (f"AP={st['ap']}/{st['act_max']} < {threshold}, 未达合成阈值"
+                      if st else "AP 检测失败, 无法判断阈值")
+            apple["errors"].append(reason)
+            if st and st["ap"] < st["act_max"]:
+                apple["eta_seconds"] = (threshold - st["ap"]) * AP_RECOVER_SECONDS
+            log_cb(f"苹果合成跳过: {reason}")
             return payload, apple
         log_cb(f"苹果合成 ×{apple_num}…")
         seed = _response_usk(payload)
@@ -468,8 +472,8 @@ def toplogin(access_token: str, mid: int, username: str, nickname: str,
         est_ap = st["ap"] if st is not None else None
         for i in range(apple_num):
             if est_ap is not None and i > 0:
-                if apple_min_ap > 0 and est_ap < apple_min_ap:
-                    apple["errors"].append(f"AP={est_ap} < {apple_min_ap}, 停止继续合成")
+                if threshold > 0 and est_ap < threshold:
+                    apple["errors"].append(f"AP={est_ap} < {threshold}, 停止继续合成")
                     break
                 if est_ap < APPLE_COST:
                     apple["errors"].append(f"AP={est_ap} < {APPLE_COST}, AP 不足")

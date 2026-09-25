@@ -27,7 +27,7 @@ jobs:
           FGO_AUTH_JSON: ${{ secrets.FGO_AUTH_JSON }}
           # 每次运行自动合成的青铜果实数量 (0=关闭); 在仓库 Settings > Variables 设置
           FGO_APPLE_NUM: ${{ vars.FGO_APPLE_NUM || '0' }}
-          # AP 达到该阈值才开始合成 (默认120); 也在仓库 Settings > Variables 设置
+          # AP 达到该阈值才开始合成 (默认120; 设为 max = AP满了才合成); 也在仓库 Settings > Variables 设置
           FGO_APPLE_AP_MIN: ${{ vars.FGO_APPLE_AP_MIN || '120' }}
 
       - name: Sync refreshed token back to repo secret

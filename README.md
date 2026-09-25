@@ -26,6 +26,7 @@ B站App扫码 → 获取 OAuth access_token
 
 > 本项目灵感来自日服签到脚本 [hexstr/FGODailyBonus](https://github.com/hexstr/FGODailyBonus)。
 > 由于日服与国服的登录协议、加密、服务器完全不同，本项目是针对国服的独立实现。
+> 有兴趣了解从零调研到部署上线的全过程？请看 [📖 开发日志](DEVELOPMENT.md)。
 
 ## 🚀 快速开始
 

@@ -455,6 +455,8 @@ def toplogin(access_token: str, mid: int, username: str, nickname: str,
             st = None
         if st is not None and apple_min_ap > 0 and st["ap"] < apple_min_ap:
             apple["errors"].append(f"AP={st['ap']} < {apple_min_ap}, 未达合成阈值")
+            if st["ap"] < st["act_max"]:
+                apple["eta_seconds"] = (apple_min_ap - st["ap"]) * AP_RECOVER_SECONDS
             log_cb(f"苹果合成跳过: AP={st['ap']} < {apple_min_ap}")
             return payload, apple
         log_cb(f"苹果合成 ×{apple_num}…")

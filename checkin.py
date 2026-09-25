@@ -149,7 +149,12 @@ def main() -> int:
             print(f"苹果合成: {apple['converted']}/{apple['requested']} 个 "
                   f"({apple['name']}){tail}")
         elif apple["errors"] and "未达合成阈值" in apple["errors"][0]:
-            print(f"苹果合成: 跳过, {apple['errors'][0]}")
+            eta = apple.get("eta_seconds")
+            eta_txt = ""
+            if eta:
+                h, m = divmod(round(eta / 60), 60)
+                eta_txt = f", 约 {h}小时{m}分钟后达到阈值" if h else f", 约{m}分钟后达到阈值"
+            print(f"苹果合成: 跳过, {apple['errors'][0]}{eta_txt}")
         else:
             print(f"苹果合成: 未完成 ({'; '.join(apple['errors']) or '未知原因'}){tail}")
     return 0

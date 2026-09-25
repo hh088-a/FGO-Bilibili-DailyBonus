@@ -2,8 +2,10 @@ name: FGO B服每日签到
 
 on:
   schedule:
-    # 每天北京时间 01:05 (UTC 17:05) 运行
+    # 每天北京时间 01:05 (UTC 17:05) 运行签到
     - cron: '5 17 * * *'
+    # 每 3 小时检查 AP, 达到阈值(默认120)则合成 1 个青铜果实 (UTC :17, 避开整点高峰)
+    - cron: '17 */3 * * *'
   workflow_dispatch:  # 允许手动触发
 
 jobs:
@@ -25,6 +27,8 @@ jobs:
           FGO_AUTH_JSON: ${{ secrets.FGO_AUTH_JSON }}
           # 每次运行自动合成的青铜果实数量 (0=关闭); 在仓库 Settings > Variables 设置
           FGO_APPLE_NUM: ${{ vars.FGO_APPLE_NUM || '0' }}
+          # AP 达到该阈值才开始合成 (默认120); 也在仓库 Settings > Variables 设置
+          FGO_APPLE_AP_MIN: ${{ vars.FGO_APPLE_AP_MIN || '120' }}
 
       - name: Sync refreshed token back to repo secret
         if: always()

@@ -91,6 +91,10 @@ def main() -> int:
         apple_num = max(0, int(os.environ.get("FGO_APPLE_NUM") or 0))
     except ValueError:
         apple_num = 0
+    try:
+        apple_min_ap = max(0, int(os.environ.get("FGO_APPLE_AP_MIN") or 120))
+    except ValueError:
+        apple_min_ap = 120
 
     changed = False
     remaining = int(auth.get("expires_at") or 0) - time.time()
@@ -121,6 +125,7 @@ def main() -> int:
             device_id=auth["device_id"],
             platform_id=auth.get("platform", "android_bili"),
             apple_num=apple_num,
+            apple_min_ap=apple_min_ap,
         )
     except fgo_cn.FgoError as exc:
         print(f"\n签到失败: {exc}")
@@ -135,10 +140,18 @@ def main() -> int:
     print("\n===== 签到成功 =====")
     print(summarize(payload))
     if apple is not None:
-        if apple["converted"]:
-            print(f"苹果合成: {apple['converted']}/{apple['requested']} 个 ({apple['name']})")
+        if apple.get("ap_before") is not None:
+            tail = f" (AP {apple['ap_before']}" + (
+                f"→{apple['ap_after']})" if apple.get("ap_after") is not None else ")")
         else:
-            print(f"苹果合成: 未完成 ({'; '.join(apple['errors']) or '未知原因'})")
+            tail = ""
+        if apple["converted"]:
+            print(f"苹果合成: {apple['converted']}/{apple['requested']} 个 "
+                  f"({apple['name']}){tail}")
+        elif apple["errors"] and "未达合成阈值" in apple["errors"][0]:
+            print(f"苹果合成: 跳过, {apple['errors'][0]}")
+        else:
+            print(f"苹果合成: 未完成 ({'; '.join(apple['errors']) or '未知原因'}){tail}")
     return 0
 
 

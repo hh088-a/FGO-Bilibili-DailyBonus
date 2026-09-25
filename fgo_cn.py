@@ -40,6 +40,8 @@ FUNNY_KEY = "B5UI78B3486A7B48IB9AUF8E8P97CPI9"
 DEFAULT_UNITY = "2022.3.62f2"
 TIMEOUT = (12, 35)
 APPLE_SHOP_ID = 13000000  # 主界面 AP 加号: 树苗+40AP -> 青铜果实 (shoppurchase)
+APPLE_COST = 40           # 一次合成消耗 AP (另需树苗)
+AP_RECOVER_SECONDS = 300  # AP 每 300 秒回复 1 点 (已实测确认)
 
 PLATFORMS: dict[str, dict[str, Any]] = {
     "android_bili": {
@@ -275,6 +277,32 @@ def _purchase_result(payload: dict[str, Any]) -> dict[str, Any]:
             "fail": "响应中找不到结果"}
 
 
+def ap_state(payload: dict[str, Any]) -> dict[str, int]:
+    """从 toplogin/shoppurchase 响应计算 AP 状态。
+
+    公式(已用游戏内显示标定, 2026-09-26, actMax=141 时显示 14, 公式给出 14):
+        AP = actMax - ceil((actRecoverAt - serverTime) / 300)
+    actRecoverAt 为 AP 回满时刻; 已回满(actRecoverAt<=now)时 AP=actMax。
+    返回 {ap, act_max, act_recover_at, server_time}。
+    """
+    cache = payload.get("cache") or {}
+    server_time = int(cache.get("serverTime") or time.time())
+    replaced = cache.get("replaced") or {}
+    game = (replaced.get("userGame") or [{}])[0] if replaced.get("userGame") else {}
+    act_max = int(game.get("actMax") or 0)
+    recover_at = int(game.get("actRecoverAt") or 0)
+    if act_max <= 0:
+        raise FgoError("响应中缺少 actMax, 无法计算 AP")
+    if recover_at <= server_time:
+        ap = act_max
+    else:
+        delta = recover_at - server_time
+        ap = act_max - -(-delta // AP_RECOVER_SECONDS)  # ceil
+        ap = max(0, ap)
+    return {"ap": ap, "act_max": act_max, "act_recover_at": recover_at,
+            "server_time": server_time}
+
+
 def fetch_game_top() -> dict[str, Any]:
     last_exc: Exception | None = None
     for url in CHALDEA_GAMETOP_URLS:
@@ -314,7 +342,7 @@ def _game_headers(unity_ver: str, platform: dict[str, Any]) -> dict[str, str]:
 
 def toplogin(access_token: str, mid: int, username: str, nickname: str,
              device_id: str, platform_id: str = "android_bili",
-             apple_num: int = 0, log_cb=print) -> tuple[dict[str, Any], dict[str, Any] | None]:
+             apple_num: int = 0, apple_min_ap: int = 0, log_cb=print) -> tuple[dict[str, Any], dict[str, Any] | None]:
     """执行完整登录链, 返回 (toplogin 响应 payload, 苹果合成结果 apple_num=0 时为 None)。"""
     platform = PLATFORMS[platform_id]
     cn = fetch_game_top()
@@ -416,14 +444,34 @@ def toplogin(access_token: str, mid: int, username: str, nickname: str,
     # 5/5 可选: AP -> 青铜果实 合成 (树苗+40AP, usk 每次响应轮换)
     apple: dict[str, Any] | None = None
     if apple_num > 0:
+        apple = {"requested": apple_num, "converted": 0, "name": "", "errors": [],
+                 "ap_before": None, "ap_after": None}
+        try:
+            st = ap_state(payload)
+            apple["ap_before"] = st["ap"]
+            log_cb(f"当前 AP: {st['ap']}/{st['act_max']}")
+        except FgoError as exc:
+            log_cb(f"AP 检测失败: {exc}")
+            st = None
+        if st is not None and apple_min_ap > 0 and st["ap"] < apple_min_ap:
+            apple["errors"].append(f"AP={st['ap']} < {apple_min_ap}, 未达合成阈值")
+            log_cb(f"苹果合成跳过: AP={st['ap']} < {apple_min_ap}")
+            return payload, apple
         log_cb(f"苹果合成 ×{apple_num}…")
         seed = _response_usk(payload)
         if seed:
             usk = _next_usk(seed)
-        apple = {"requested": apple_num, "converted": 0, "name": "", "errors": []}
         if not seed:
             log_cb("提示: toplogin 响应未含 usk 种子, 尝试沿用当前 usk")
-        for _ in range(apple_num):
+        est_ap = st["ap"] if st is not None else None
+        for i in range(apple_num):
+            if est_ap is not None and i > 0:
+                if apple_min_ap > 0 and est_ap < apple_min_ap:
+                    apple["errors"].append(f"AP={est_ap} < {apple_min_ap}, 停止继续合成")
+                    break
+                if est_ap < APPLE_COST:
+                    apple["errors"].append(f"AP={est_ap} < {APPLE_COST}, AP 不足")
+                    break
             client_local = time.monotonic() - app_start
             buy_url = (f"{host}/rongame_beta/rgfate/60_1001/ac.php"
                        f"?_userId={sguid}&_key=shoppurchase&_clientLocalTime={client_local:.5f}")
@@ -445,6 +493,9 @@ def toplogin(access_token: str, mid: int, username: str, nickname: str,
                 break
             apple["converted"] += 1
             apple["name"] = result["name"] or apple["name"]
+            if est_ap is not None:
+                est_ap = max(0, est_ap - APPLE_COST)
+                apple["ap_after"] = est_ap
             next_seed = _response_usk(buy_payload)
             if next_seed:
                 usk = _next_usk(next_seed)

@@ -58,7 +58,7 @@ python login_qr.py run "你的FGO御主名"
 | `FGO_AUTH_JSON` | `auth.json` 文件的**全部内容** | B站登录凭据 |
 | `FGO_UPDATE_PAT` | [创建链接](https://github.com/settings/tokens) | classic PAT，勾选 `repo` 权限，用于 token 续期后自动回写 Secrets |
 
-> **（可选）开启自动苹果合成**：同页面切到 **Variables** 标签 → **New repository variable**，添加 `FGO_APPLE_NUM` = 每次运行合成的数量（如 `1`）。不设置或设为 `0` = 关闭。
+> **（可选）开启自动苹果合成**：同页面切到 **Variables** 标签 → **New repository variable**，添加 `FGO_APPLE_NUM` = 每次运行合成的数量（如 `1`）。不设置或设为 `0` = 关闭。可再添加 `FGO_APPLE_AP_MIN`（默认 `120`）：**AP 达到该阈值才开始合成**，低于阈值本次跳过、不影响签到。
 
 ### 4. 启用 Actions 并验证
 
@@ -66,7 +66,7 @@ python login_qr.py run "你的FGO御主名"
 
 ### 5. 定时运行
 
-默认每天 **北京时间 01:05**（UTC 17:05）自动签到（FGO 每日 0 点刷新后）。如需修改，编辑 `.github/workflows/checkin.yml` 中的 `cron`。
+默认每天 **北京时间 01:05**（UTC 17:05）自动签到（FGO 每日 0 点刷新后），另有**每 3 小时**一次的检查：若开启了苹果合成且 AP ≥ `FGO_APPLE_AP_MIN`（默认 120）就合成一次，AP 恢复不到阈值则秒过。如需修改，编辑 `.github/workflows/checkin.yml` 中的 `cron`。
 
 > 注意：GitHub 定时任务在高峰期可能延迟数十分钟，属正常现象。
 
@@ -104,7 +104,7 @@ A: 扫码时加个 `ios` 参数即可：`python login_qr.py run "御主名" ios`
 A: 说明当天已经登录过游戏（奖励每天只能领一次），属于正常现象，第二天再看。
 
 **Q: 自动苹果合成消耗什么？会失败吗？**
-A: 每个果实消耗 1 个树苗 + 40 AP。AP 或树苗不足时服务器返回错误，脚本会提示"未完成"但**不影响签到结果**。数量由 `FGO_APPLE_NUM` 控制，删除该 Variable 即关闭。
+A: 每个果实消耗 1 个树苗 + 40 AP。仅当 AP ≥ `FGO_APPLE_AP_MIN`（默认 120）时才动手，低于阈值本次直接跳过并提示原因；即便动手了，AP 或树苗不足时服务器返回错误，脚本会提示"未完成"但**不影响签到结果**。数量由 `FGO_APPLE_NUM` 控制，删除该 Variable 即关闭。
 
 **Q: 会封号吗？**
 A: 无法承诺。第三方模拟客户端登录存在触发风控/违反用户协议的可能，请仅用于自己的账号并自行评估风险。

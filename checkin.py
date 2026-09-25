@@ -14,9 +14,27 @@ import time
 
 import fgo_cn
 
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 AUTH_FILE = "auth.json"
 UPDATED_FILE = "updated_auth.json"
 REFRESH_THRESHOLD = 30 * 86400  # 剩余不足 30 天则刷新
+
+_START = time.time()
+
+
+def log(msg: str) -> None:
+    """带时间戳的单行日志。"""
+    print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
+
+
+def log_cb(msg: str) -> None:
+    """传给 fgo_cn 的日志回调。"""
+    log(msg)
 
 
 def load_auth() -> tuple[dict, bool]:
@@ -84,7 +102,7 @@ def main() -> int:
     try:
         auth, from_env = load_auth()
     except FileNotFoundError:
-        print(f"找不到 {AUTH_FILE} 且未设置 FGO_AUTH_JSON, 请先运行  python login_qr.py  扫码登录")
+        log(f"找不到 {AUTH_FILE} 且未设置 FGO_AUTH_JSON, 请先运行  python login_qr.py  扫码登录")
         return 1
 
     try:
@@ -94,31 +112,35 @@ def main() -> int:
     raw_min_ap = (os.environ.get("FGO_APPLE_AP_MIN") or "120").strip().lower()
     if raw_min_ap in ("max", "full", "满"):
         apple_min_ap = -1  # -1 = AP 满了才合成
+        ap_min_txt = "max(AP满了才合成)"
     else:
         try:
             apple_min_ap = max(0, int(raw_min_ap))
         except ValueError:
             apple_min_ap = 120
+        ap_min_txt = str(apple_min_ap)
+    log(f"开始签到: 御主={auth.get('nickname', '?')} 平台={auth.get('platform', 'android_bili')} "
+        f"苹果合成={'关' if apple_num <= 0 else f'{apple_num}个/阈值{ap_min_txt}'}")
 
     changed = False
     remaining = int(auth.get("expires_at") or 0) - time.time()
 
     if remaining <= 60:
-        print("B站 access_token 已过期, 请重新运行  python login_qr.py  扫码")
+        log("B站 access_token 已过期, 请重新运行  python login_qr.py  扫码")
         return 1
 
     if remaining < REFRESH_THRESHOLD and auth.get("refresh_token"):
-        print(f"token 剩余 {remaining / 86400:.0f} 天, 执行自动刷新…")
+        log(f"token 剩余 {remaining / 86400:.0f} 天, 执行自动刷新…")
         try:
             new = fgo_cn.refresh_access_token(auth["access_token"], auth["refresh_token"])
         except fgo_cn.FgoError as exc:
-            print(f"自动刷新失败(将继续用现有 token 尝试签到): {exc}")
+            log(f"自动刷新失败(将继续用现有 token 尝试签到): {exc}")
         else:
             auth.update(new)
             changed = True
-            print("刷新成功, 新有效期 180 天")
+            log("刷新成功, 新有效期 180 天")
     else:
-        print(f"token 剩余有效期 {remaining / 86400:.0f} 天")
+        log(f"token 剩余有效期 {remaining / 86400:.0f} 天")
 
     try:
         payload, apple = fgo_cn.toplogin(
@@ -130,18 +152,20 @@ def main() -> int:
             platform_id=auth.get("platform", "android_bili"),
             apple_num=apple_num,
             apple_min_ap=apple_min_ap,
+            log_cb=log_cb,
         )
     except fgo_cn.FgoError as exc:
-        print(f"\n签到失败: {exc}")
+        log(f"签到失败: {exc}")
         return 1
     except Exception as exc:
-        print(f"\n网络或解析错误: {type(exc).__name__}: {exc}")
+        log(f"网络或解析错误: {type(exc).__name__}: {exc}")
         return 1
     finally:
         if changed:
             save_auth(auth, from_env)
 
-    print("\n===== 签到成功 =====")
+    print()
+    print("===== 签到成功 =====")
     print(summarize(payload))
     if apple is not None:
         if apple.get("ap_before") is not None:
@@ -161,6 +185,7 @@ def main() -> int:
             print(f"苹果合成: 跳过, {apple['errors'][0]}{eta_txt}")
         else:
             print(f"苹果合成: 未完成 ({'; '.join(apple['errors']) or '未知原因'}){tail}")
+    log(f"完成, 耗时 {time.time() - _START:.1f}s")
     return 0
 
 

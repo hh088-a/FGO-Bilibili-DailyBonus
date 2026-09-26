@@ -463,7 +463,7 @@ def toplogin(access_token: str, mid: int, username: str, nickname: str,
                 apple["eta_seconds"] = (threshold - st["ap"]) * AP_RECOVER_SECONDS
             log_cb(f"苹果合成跳过: {reason}")
             return payload, apple
-        log_cb(f"苹果合成 ×{apple_num}…")
+        log_cb(f"开始合成苹果 (每 40AP 换 1 个, 阈值 {threshold}, 上限 {apple_num} 个)…")
         seed = _response_usk(payload)
         if seed:
             usk = _next_usk(seed)
@@ -507,7 +507,7 @@ def toplogin(access_token: str, mid: int, username: str, nickname: str,
                 usk = _next_usk(next_seed)
             time.sleep(1.5)
         if apple["converted"]:
-            log_cb(f"苹果合成完成: {apple['converted']}/{apple_num}")
+            log_cb(f"苹果合成完成: 共 {apple['converted']} 个")
         else:
             log_cb(f"苹果合成未完成: {'; '.join(apple['errors']) or '未知'}")
     return payload, apple

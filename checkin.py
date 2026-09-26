@@ -174,8 +174,7 @@ def main() -> int:
         else:
             tail = ""
         if apple["converted"]:
-            print(f"苹果合成: {apple['converted']}/{apple['requested']} 个 "
-                  f"({apple['name']}){tail}")
+            print(f"苹果合成: {apple['converted']} 个 ({apple['name']}){tail}")
         elif apple["errors"] and "未达合成阈值" in apple["errors"][0]:
             eta = apple.get("eta_seconds")
             eta_txt = ""

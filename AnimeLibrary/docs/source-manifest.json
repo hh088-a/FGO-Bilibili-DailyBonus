@@ -1,0 +1,62 @@
+[
+  {
+    "file": "archive/runtime/batch.py",
+    "original_sha256": "fa919e568c8eb3209790fd3f766f472590835b47bd2fd0f25335f7ad102e6836",
+    "archive_sha256": "78171112cab5a525261a174dddb082ff3afd1639a46581b6ec81bb849341f4b9",
+    "adapted": true
+  },
+  {
+    "file": "archive/runtime/cloud_queue.py",
+    "original_sha256": "129c3fd04dccef15334385e3e1d1d8c804f11eb27230bc269b7481a890d96b58",
+    "archive_sha256": "ee26af9987814f36b4ccc66f3a0fe6702b935ad2a220558e41ba673e5b91919b",
+    "adapted": true
+  },
+  {
+    "file": "archive/runtime/library_watch.py",
+    "original_sha256": "ada6e9cc1b19769a6faff78d40073054689676f05775ec1829c6b22f291399a2",
+    "archive_sha256": "675cd1ca0bf2bef8af1ce85c484473328f56af622a3c3efd97bace16e5921ad5",
+    "adapted": false
+  },
+  {
+    "file": "archive/runtime/organize_115.py",
+    "original_sha256": "c6e0a7331be88b2cfe1d5e63c1c37c91ae0d13a8939cc6669ede26efed4de04c",
+    "archive_sha256": "7fe52e987354b7def48f03cdd7448a1e55ac9e8a3383a6dbcbe0596dfb73a003",
+    "adapted": true
+  },
+  {
+    "file": "archive/runtime/organize_cloud_batch.py",
+    "original_sha256": "f75e6ecd4cb09c96969d698c00c969fef9f8860495c2fc8f6e5af35c91dfd42b",
+    "archive_sha256": "0682b6b520949dca5514f4042901e604c89584cf1cae0325ebe798a487aff242",
+    "adapted": false
+  },
+  {
+    "file": "archive/runtime/http.ps1",
+    "original_sha256": "355f94c67c7f1d59c2f6760eca153a1c0753d37252b1ac6d76489e8eae3b292e",
+    "archive_sha256": "355f94c67c7f1d59c2f6760eca153a1c0753d37252b1ac6d76489e8eae3b292e",
+    "adapted": false
+  },
+  {
+    "file": "archive/runtime/Start-Batch.ps1",
+    "original_sha256": "7b1f8afa041fd139bdb003d475324431eddf7b97d1e781852d71f2ad9999c05d",
+    "archive_sha256": "3a81c187c8ee8aec37ec793ce173b61f605e387e41dbe9f3abaedb1b2ca7e03d",
+    "adapted": false
+  },
+  {
+    "file": "archive/runtime/Start-CloudQueue.ps1",
+    "original_sha256": "3871092e7a427bcd4c3f1169d1a5104e6e19c82d5e47b0b6d842b949afbb36a9",
+    "archive_sha256": "3871092e7a427bcd4c3f1169d1a5104e6e19c82d5e47b0b6d842b949afbb36a9",
+    "adapted": false
+  },
+  {
+    "file": "archive/runtime/Pause-Batch.ps1",
+    "original_sha256": "85bbd237b30b4a4d794a6f72d569d8d07e18bd58712e97b9a83c61a0fcdc373d",
+    "archive_sha256": "fd334e61ae055025bc745e5a8056ff1f252b68826ef40adf26f2d19dadf9144a",
+    "adapted": false
+  },
+  {
+    "file": "archive/runtime/Refresh-IfIdle.ps1",
+    "original_sha256": "b003bb2b67e0c8d137fe5f6caf2079699f03a6b804a9de8c4bfd2c8f8349e155",
+    "archive_sha256": "b003bb2b67e0c8d137fe5f6caf2079699f03a6b804a9de8c4bfd2c8f8349e155",
+    "adapted": false
+  }
+]

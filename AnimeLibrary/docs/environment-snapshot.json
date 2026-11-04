@@ -1,0 +1,21 @@
+{
+  "qb_version": "v5.3.0",
+  "qb_preferences": {
+    "max_active_downloads": 100,
+    "max_active_torrents": 104,
+    "max_active_uploads": 4,
+    "dl_limit": 2147482624,
+    "queueing_enabled": true,
+    "alt_dl_limit": 10240000
+  },
+  "qb_effective_download_limit_bytes_per_second": 2147482624,
+  "cleanup_net_reclaimed_bytes": 1017623726,
+  "jellyfin_server_version": "12.4.0",
+  "javascript_injector": [
+    {
+      "name": "JavaScript Injector",
+      "version": "4.1.0.0",
+      "status": "Active"
+    }
+  ]
+}

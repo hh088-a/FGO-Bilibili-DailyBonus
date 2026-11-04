@@ -1,0 +1,24 @@
+{
+  "captured_at": "2026-11-04T21:20:21+08:00",
+  "report_updated_at": "2026-11-04T21:19:02",
+  "verified_release_groups": 609,
+  "episode_or_ova_files": 6317,
+  "movie_files": 36,
+  "external_subtitle_files": 1781,
+  "counts_are": "verified resource groups and files; not unique complete anime titles",
+  "target_catalog_subjects": 1594,
+  "local_task_states": {
+    "cloud_verified": 379,
+    "abandoned": 1,
+    "source_replaced": 5,
+    "waiting_for_peers": 341,
+    "upload_pending": 8,
+    "downloading": 92
+  },
+  "cloud_task_states": {
+    "OFFLINE_FINISHED": 1492,
+    "OFFLINE_DOWNLOADING": 6,
+    "OFFLINE_INIT": 1
+  },
+  "cloud_quota_stop_present": true
+}

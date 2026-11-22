@@ -1,12 +1,9 @@
 name: FGO B服每日签到
 
 on:
-  schedule:
-    # 每天北京时间 01:05 (UTC 17:05) 运行签到
-    - cron: '5 17 * * *'
-    # 每 3 小时检查 AP, 达到阈值(默认120)则合成 1 个青铜果实 (UTC :17, 避开整点高峰)
-    - cron: '17 */3 * * *'
-  workflow_dispatch:  # 允许手动触发
+  # 定时已改为 Cloudflare Workers Cron 触发(见 cf-cron/):
+  # Workers 每天 UTC 17:05 调 workflow_dispatch 启动本流程
+  workflow_dispatch:  # 手动 / 外部触发
 
 jobs:
   checkin:

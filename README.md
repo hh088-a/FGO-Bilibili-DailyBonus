@@ -56,7 +56,16 @@ python login_qr.py run "你的FGO御主名"
 | Secret | 值 | 说明 |
 |---|---|---|
 | `FGO_AUTH_JSON` | `auth.json` 文件的**全部内容** | B站登录凭据 |
-| `FGO_UPDATE_PAT` | [创建链接](https://github.com/settings/tokens) | classic PAT，勾选 `repo` 权限，用于 token 续期后自动回写 Secrets |
+| `FGO_UPDATE_PAT` | [创建链接](https://github.com/settings/tokens) | 用于 token 续期后自动回写当前仓库的 `FGO_AUTH_JSON` Secret |
+| `FGO_LOG_OWNER` | 你的 GitHub 用户名 | 私有日志仓库所属账号；与 `FGO_LOG_PAT` 一起使用 |
+| `FGO_LOG_REPO` | `FGO-Bilibili-DailyBonusLog` | 私有日志仓库名；不设置则使用该默认值 |
+| `FGO_LOG_PAT` | fine-grained PAT | 仅授予日志仓库 `Contents: Read and write`；不要与 `FGO_UPDATE_PAT` 混用 |
+| `TELEGRAM_BOT_TOKEN` | BotFather 创建的 token | 可选，Telegram 机器人 token |
+| `TELEGRAM_ADMIN_ID` | 你的 chat ID | 可选，接收签到摘要的聊天 ID |
+
+先在 `FGO_LOG_OWNER` 账号下创建一个**私有**日志仓库（推荐名为 `FGO-Bilibili-DailyBonusLog`），不需要提交任何文件。脚本会按北京时间追加写入 `YYYY/MM/DD.log`。日志只包含签到摘要，不包含 `FGO_AUTH_JSON`、access token 或 refresh token。
+
+`FGO_LOG_PAT` 只授权该日志仓库的 `Contents: Read and write`；`FGO_UPDATE_PAT` 只负责更新主仓库的登录 Secret。Telegram 和日志上传均为可选，未配置时签到仍会正常运行。
 
 > **（可选）开启自动苹果合成**：同页面切到 **Variables** 标签 → **New repository variable**，添加 `FGO_APPLE_NUM` = 每次运行合成的数量（如 `1`）。不设置或设为 `0` = 关闭。可再添加 `FGO_APPLE_AP_MIN`：**AP 达到该阈值才开始合成**，默认 `120`，设为 **`max`** 则 **AP 满了才换**（自动等于上限，升级后自适应）；低于阈值本次跳过、不影响签到。
 

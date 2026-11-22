@@ -7,10 +7,12 @@
 token 剩余有效期不足 30 天时自动刷新;
 凭据有变化时会写回 auth.json (本地) 或生成 updated_auth.json (CI, 供更新 secret)。
 """
+import base64
 import json
 import os
 import sys
 import time
+from datetime import datetime, timedelta, timezone
 
 import fgo_cn
 
@@ -53,6 +55,50 @@ def save_auth(auth: dict, from_env: bool) -> None:
     else:
         with open(AUTH_FILE, "w", encoding="utf-8") as f:
             json.dump(auth, f, ensure_ascii=False, indent=2)
+
+
+def publish_report(report: str) -> None:
+    """可选地推送到 Telegram，并写入私有 GitHub 日志仓库。"""
+    token = os.environ.get("FGO_LOG_PAT", "").strip()
+    owner = os.environ.get("FGO_LOG_OWNER", "").strip()
+    repo = os.environ.get("FGO_LOG_REPO", "FGO-Bilibili-DailyBonusLog").strip()
+    if token and owner:
+        now = datetime.now(timezone(timedelta(hours=8)))
+        path = now.strftime("%Y/%m/%d.log")
+        url = f"https://api.github.com/repos/{owner}/{repo}/contents/{path}"
+        headers = {
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {token}",
+            "X-GitHub-Api-Version": "2022-11-28",
+        }
+        try:
+            current = __import__("requests").get(url, headers=headers, timeout=20)
+            payload = {
+                "message": f"签到日志 {path}",
+                "content": base64.b64encode((report + "\n").encode("utf-8")).decode("ascii"),
+            }
+            if current.ok and current.json().get("sha"):
+                payload["sha"] = current.json()["sha"]
+                old = base64.b64decode(current.json().get("content", "")).decode("utf-8")
+                payload["content"] = base64.b64encode((old.rstrip("\n") + "\n" + report + "\n").encode("utf-8")).decode("ascii")
+            response = __import__("requests").put(url, headers=headers, json=payload, timeout=20)
+            response.raise_for_status()
+            print("日志已写入 GitHub 私有仓库")
+        except Exception as exc:
+            print(f"GitHub 日志上传失败: {type(exc).__name__}: {exc}")
+
+    bot = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+    chat_id = os.environ.get("TELEGRAM_ADMIN_ID", "").strip()
+    if bot and chat_id and bot != "nullvalue" and chat_id != "nullvalue":
+        try:
+            response = __import__("requests").post(
+                f"https://api.telegram.org/bot{bot}/sendMessage",
+                data={"chat_id": chat_id, "text": report}, timeout=20,
+            )
+            response.raise_for_status()
+            print("Telegram 通知已发送")
+        except Exception as exc:
+            print(f"Telegram 通知失败: {type(exc).__name__}: {exc}")
 
 
 def summarize(payload: dict) -> str:
@@ -184,6 +230,15 @@ def main() -> int:
             print(f"苹果合成: 跳过, {apple['errors'][0]}{eta_txt}")
         else:
             print(f"苹果合成: 未完成 ({'; '.join(apple['errors']) or '未知原因'}){tail}")
+    report_lines = [
+        f"FGO B服签到 - {datetime.now(timezone(timedelta(hours=8))):%Y-%m-%d %H:%M:%S}",
+        "状态: 成功",
+        f"御主: {auth.get('nickname', '?')}",
+        summarize(payload),
+    ]
+    if apple is not None:
+        report_lines.append(f"苹果合成: {apple.get('converted', 0)} 个")
+    publish_report("\n".join(report_lines))
     log(f"完成, 耗时 {time.time() - _START:.1f}s")
     return 0
 

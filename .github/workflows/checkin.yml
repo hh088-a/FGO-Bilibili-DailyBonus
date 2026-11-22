@@ -29,6 +29,13 @@ jobs:
           FGO_APPLE_NUM: ${{ vars.FGO_APPLE_NUM || '0' }}
           # AP 达到该阈值才开始合成 (默认120; 设为 max = AP满了才合成); 也在仓库 Settings > Variables 设置
           FGO_APPLE_AP_MIN: ${{ vars.FGO_APPLE_AP_MIN || '120' }}
+          # 可选：私有日志仓库，例如你的 GitHub 用户名
+          FGO_LOG_OWNER: ${{ secrets.FGO_LOG_OWNER }}
+          FGO_LOG_REPO: ${{ secrets.FGO_LOG_REPO || 'FGO-Bilibili-DailyBonusLog' }}
+          FGO_LOG_PAT: ${{ secrets.FGO_LOG_PAT }}
+          # 可选：Telegram 通知
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_ADMIN_ID: ${{ secrets.TELEGRAM_ADMIN_ID }}
 
       - name: Sync refreshed token back to repo secret
         if: always()

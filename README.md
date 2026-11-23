@@ -133,7 +133,6 @@ Worker 的 Settings → **Variables and Secrets**，六项全部使用 **Secret*
 | `TRIGGER_KEY` | Secret | 自定口令 | 手动触发口令，例如 `fgo-9k2mQx7tR4` |
 
 填完点 **Deploy** 使配置生效。
-```
 
 ## 4. 触发与验证
 

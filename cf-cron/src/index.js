@@ -15,7 +15,7 @@ export default {
       headers: {
         Authorization: `Bearer ${env.GH_PAT}`,
         Accept: "application/vnd.github+json",
-        "User-Agent": "fgo-cron-worker",
+        "User-Agent": "fgo-bilibili-dailybonus-workers",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ ref: REF }),

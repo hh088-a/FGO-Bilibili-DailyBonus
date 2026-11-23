@@ -79,6 +79,93 @@ python login_qr.py run "你的FGO御主名"
 
 > 注意：GitHub 定时任务在高峰期可能延迟数十分钟，属正常现象。
 
+# cf-cron — 用 Cloudflare Workers 定时触发签到
+
+GitHub Actions 自带的定时任务经常延迟甚至被跳过，这里用 Workers 的 Cron 到点调用
+`workflow_dispatch`，准时启动 `.github/workflows/checkin.yml`。
+
+Worker 有两个入口：
+
+| 入口 | 用途 | 需要鉴权 |
+| Cron Trigger | 每天自动触发一次 | 否 |
+| `GET /trigger?key=...` | 手动补触发或验证 | 是，`TRIGGER_KEY` |
+
+## 1. 建 GitHub PAT
+
+> 可以使用上面创建用于续期登录凭据的`FGO_UPDATE_PAT`
+
+## 2. 部署
+
+### 方式 A：网页
+
+1. dash.cloudflare.com → **Workers & Pages** → **Create** → **Worker** → **Start with Hello World!**
+2. 名称填 `fgo-daily-trigger` → **Deploy**
+3. **Edit code** → 删掉模板代码 → 粘贴 `src/index.js` 全文 → **Deploy**
+4. 按第 3 节配置变量
+5. Settings → **Triggers** → Cron Triggers → **Add Cron Trigger**，填 `10 20 * * *`
+
+### 方式 B：命令行
+
+```bash
+cd cf-cron
+npm i -D wrangler
+
+export CLOUDFLARE_API_TOKEN=你的CloudflareToken
+export CLOUDFLARE_ACCOUNT_ID=你的AccountID
+
+npx wrangler secret put GITHUB_PAT
+npx wrangler secret put TRIGGER_KEY
+npx wrangler deploy
+```
+
+## 3. Variables and Secrets
+
+Worker 的 Settings → **Variables and Secrets**，六项全部使用 **Secret** 类型
+（部分控制台版本的 Text 类型不生效，统一用 Secret 最稳）：
+
+| 名称 | 类型 | 值 | 说明 |
+|---|---|---|---|
+| `REPO_OWNER` | Secret | `xxxx` | GitHub账号名 |
+| `REPO_NAME` | Secret | `FGO-Bilibili-DailyBonus` | 仓库名 |
+| `WORKFLOW_FILE` | Secret | `checkin.yml` | workflow **文件名**，不是 workflow 名称 |
+| `REF` | Secret | `main` | 触发的分支 |
+| `GITHUB_PAT` | Secret | 第 1 步的 PAT | 调 GitHub API 用 |
+| `TRIGGER_KEY` | Secret | 自定口令 | 手动触发口令，例如 `fgo-9k2mQx7tR4` |
+
+填完点 **Deploy** 使配置生效。
+```
+
+## 4. 触发与验证
+
+手动：
+
+```
+https://fgo-daily-trigger.<你的子域>.workers.dev/trigger?key=<TRIGGER_KEY>
+```
+
+成功返回 `已触发 zero3334/FGO-Bilibili-DailyBonus checkin.yml (ref=main)`，
+同时 GitHub Actions 页面会出现一条新的 run。
+
+定时：Cron 表达式的时区是 **UTC**，北京时间减 8 小时。
+`10 20 * * *` = 北京 04:10（FGO 每日 04:00 重置之后）。
+改时间就改这里再 Deploy。
+
+## 5. 排错
+
+| 现象 | 原因 |
+|---|---|
+| `401 forbidden: key 不匹配` | `?key=` 与 `TRIGGER_KEY` 不一致，或粘贴时带了空格换行 |
+| `500 服务端未配置 TRIGGER_KEY` | 变量没保存，或保存后没 Deploy |
+| `触发失败 HTTP 401` | GitHub PAT 过期或缺少 Actions 写权限 |
+| `触发失败 HTTP 404` | `REPO_OWNER` / `REPO_NAME` / `WORKFLOW_FILE` 写错 |
+| `缺少配置` | 环境变量没读到，检查名称大小写 |
+| 到点没有 run | 看 Worker 的 Logs，能直接看到触发结果码 |
+
+## 6. 与仓库内其他定时方式的关系
+
+启用本目录的 Worker 后，`.github/workflows/checkin.yml` 里不再保留 `schedule` 触发，
+避免与 Worker 重复签到。改代码时 `cf-cron/src/index.js` 与本仓库保持一致即可。
+
 ## 💻 纯本地运行（可选，不用 GitHub）
 
 完成上面第 2 步后：

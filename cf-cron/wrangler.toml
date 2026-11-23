@@ -1,15 +1,13 @@
-name = "fgo-bilibili-dailybonus"
+name = "fgo-daily-trigger"
 main = "src/index.js"
-compatibility_date = "2026-11-01"
+compatibility_date = "2024-11-01"
+
+# 每天 UTC 20:10 = 北京时间 04:10 (FGO 每日 04:00 重置后)
+[triggers]
+crons = ["10 20 * * *"]
 
 [vars]
-OWNER = "zero3334"
-REPO = "FGO-Bilibili-DailyBonus"
-WORKFLOW = "checkin.yml"
+REPO_OWNER = "zero3334"
+REPO_NAME = "FGO-Bilibili-DailyBonus"
+WORKFLOW_FILE = "checkin.yml"
 REF = "main"
-
-[triggers]
-# UTC 23:00 = 北京 07:00
-crons = ["00 04 * * *"]
-# 需要每 3 小时查 AP 就换成下面这条（并删掉上面那行）：
-# crons = ["17 */3 * * *"]

@@ -56,7 +56,16 @@ python login_qr.py run "你的FGO御主名"
 | Secret | 值 | 说明 |
 |---|---|---|
 | `FGO_AUTH_JSON` | `auth.json` 文件的**全部内容** | B站登录凭据 |
-| `FGO_UPDATE_PAT` | [创建链接](https://github.com/settings/tokens) | classic PAT，勾选 `repo` 权限，用于 token 续期后自动回写 Secrets |
+| `FGO_UPDATE_PAT` | [创建链接](https://github.com/settings/tokens) | 用于 token 续期后自动回写当前仓库的 `FGO_AUTH_JSON` Secret |
+| `FGO_LOG_OWNER` | 你的 GitHub 用户名 | 私有日志仓库所属账号；与 `FGO_LOG_PAT` 一起使用 |
+| `FGO_LOG_REPO` | `FGO-Bilibili-DailyBonusLog` | 私有日志仓库名；不设置则使用该默认值 |
+| `FGO_LOG_PAT` | fine-grained PAT | 仅授予日志仓库 `Contents: Read and write`；不要与 `FGO_UPDATE_PAT` 混用 |
+| `TELEGRAM_BOT_TOKEN` | BotFather 创建的 token | 可选，Telegram 机器人 token |
+| `TELEGRAM_ADMIN_ID` | 你的 chat ID | 可选，接收签到摘要的聊天 ID |
+
+先在 `FGO_LOG_OWNER` 账号下创建一个**私有**日志仓库（推荐名为 `FGO-Bilibili-DailyBonusLog`），不需要提交任何文件。脚本会按北京时间追加写入 `YYYY/MM/DD.log`。日志只包含签到摘要，不包含 `FGO_AUTH_JSON`、access token 或 refresh token。
+
+`FGO_LOG_PAT` 只授权该日志仓库的 `Contents: Read and write`；`FGO_UPDATE_PAT` 只负责更新主仓库的登录 Secret。Telegram 和日志上传均为可选，未配置时签到仍会正常运行。
 
 > **（可选）开启自动苹果合成**：同页面切到 **Variables** 标签 → **New repository variable**，添加 `FGO_APPLE_NUM` = 每次运行合成的数量（如 `1`）。不设置或设为 `0` = 关闭。可再添加 `FGO_APPLE_AP_MIN`：**AP 达到该阈值才开始合成**，默认 `120`，设为 **`max`** 则 **AP 满了才换**（自动等于上限，升级后自适应）；低于阈值本次跳过、不影响签到。
 
@@ -69,6 +78,92 @@ python login_qr.py run "你的FGO御主名"
 默认每天 **北京时间 01:05**（UTC 17:05）自动签到（FGO 每日 0 点刷新后），另有**每 3 小时**一次的检查：若开启了苹果合成且 AP ≥ `FGO_APPLE_AP_MIN`（默认 120）就合成一次，AP 恢复不到阈值则秒过。如需修改，编辑 `.github/workflows/checkin.yml` 中的 `cron`。
 
 > 注意：GitHub 定时任务在高峰期可能延迟数十分钟，属正常现象。
+
+# cf-cron — 用 Cloudflare Workers 定时触发签到
+
+GitHub Actions 自带的定时任务经常延迟甚至被跳过，这里用 Workers 的 Cron 到点调用
+`workflow_dispatch`，准时启动 `.github/workflows/checkin.yml`。
+
+Worker 有两个入口：
+
+| 入口 | 用途 | 需要鉴权 |
+| Cron Trigger | 每天自动触发一次 | 否 |
+| `GET /trigger?key=...` | 手动补触发或验证 | 是，`TRIGGER_KEY` |
+
+## 1. 建 GitHub PAT
+
+> 可以使用上面创建用于续期登录凭据的`FGO_UPDATE_PAT`
+
+## 2. 部署
+
+### 方式 A：网页
+
+1. dash.cloudflare.com → **Workers & Pages** → **Create** → **Worker** → **Start with Hello World!**
+2. 名称填 `fgo-daily-trigger` → **Deploy**
+3. **Edit code** → 删掉模板代码 → 粘贴 `src/index.js` 全文 → **Deploy**
+4. 按第 3 节配置变量
+5. Settings → **Triggers** → Cron Triggers → **Add Cron Trigger**，填 `10 20 * * *`
+
+### 方式 B：命令行
+
+```bash
+cd cf-cron
+npm i -D wrangler
+
+export CLOUDFLARE_API_TOKEN=你的CloudflareToken
+export CLOUDFLARE_ACCOUNT_ID=你的AccountID
+
+npx wrangler secret put GITHUB_PAT
+npx wrangler secret put TRIGGER_KEY
+npx wrangler deploy
+```
+
+## 3. Variables and Secrets
+
+Worker 的 Settings → **Variables and Secrets**，六项全部使用 **Secret** 类型
+（部分控制台版本的 Text 类型不生效，统一用 Secret 最稳）：
+
+| 名称 | 类型 | 值 | 说明 |
+|---|---|---|---|
+| `REPO_OWNER` | Secret | `xxxx` | GitHub账号名 |
+| `REPO_NAME` | Secret | `FGO-Bilibili-DailyBonus` | 仓库名 |
+| `WORKFLOW_FILE` | Text | `checkin.yml` | workflow **文件名**，不是 workflow 名称 |
+| `REF` | Text | `main` | 触发的分支 |
+| `GITHUB_PAT` | Secret | 第 1 步的 PAT | 调 GitHub API 用 |
+| `TRIGGER_KEY` | Secret | 自定口令 | 手动触发口令，例如 `fgo_9k2mQx7tR4` |
+
+填完点 **Deploy** 使配置生效。
+
+## 4. 触发与验证
+
+手动：
+
+```
+https://fgo-daily-trigger.<你的子域>.workers.dev/trigger?key=<TRIGGER_KEY>
+```
+
+成功返回 `已触发 zero3334/FGO-Bilibili-DailyBonus checkin.yml (ref=main)`，
+同时 GitHub Actions 页面会出现一条新的 run。
+
+定时：Cron 表达式的时区是 **UTC**，北京时间减 8 小时。
+`10 20 * * *` = 北京 04:10（FGO 每日 04:00 重置之后）。
+改时间就改这里再 Deploy。
+
+## 5. 排错
+
+| 现象 | 原因 |
+|---|---|
+| `401 forbidden: key 不匹配` | `?key=` 与 `TRIGGER_KEY` 不一致，或粘贴时带了空格换行 |
+| `500 服务端未配置 TRIGGER_KEY` | 变量没保存，或保存后没 Deploy |
+| `触发失败 HTTP 401` | GitHub PAT 过期或缺少 Actions 写权限 |
+| `触发失败 HTTP 404` | `REPO_OWNER` / `REPO_NAME` / `WORKFLOW_FILE` 写错 |
+| `缺少配置` | 环境变量没读到，检查名称大小写 |
+| 到点没有 run | 看 Worker 的 Logs，能直接看到触发结果码 |
+
+## 6. 与仓库内其他定时方式的关系
+
+启用本目录的 Worker 后，`.github/workflows/checkin.yml` 里不再保留 `schedule` 触发，
+避免与 Worker 重复签到。改代码时 `cf-cron/src/index.js` 与本仓库保持一致即可。
 
 ## 💻 纯本地运行（可选，不用 GitHub）
 

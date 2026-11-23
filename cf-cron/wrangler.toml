@@ -1,0 +1,13 @@
+name = "fgo-daily-trigger"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+# 每天 UTC 20:10 = 北京时间 04:10 (FGO 每日 04:00 重置后)
+[triggers]
+crons = ["40 04 * * *"]
+
+[vars]
+REPO_OWNER = "zero3334"
+REPO_NAME = "FGO-Bilibili-DailyBonus"
+WORKFLOW_FILE = "checkin.yml"
+REF = "main"

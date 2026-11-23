@@ -127,8 +127,8 @@ Worker 的 Settings → **Variables and Secrets**，六项全部使用 **Secret*
 |---|---|---|---|
 | `REPO_OWNER` | Secret | `xxxx` | GitHub账号名 |
 | `REPO_NAME` | Secret | `FGO-Bilibili-DailyBonus` | 仓库名 |
-| `WORKFLOW_FILE` | Secret | `checkin.yml` | workflow **文件名**，不是 workflow 名称 |
-| `REF` | Secret | `main` | 触发的分支 |
+| `WORKFLOW_FILE` | Text | `checkin.yml` | workflow **文件名**，不是 workflow 名称 |
+| `REF` | Text | `main` | 触发的分支 |
 | `GITHUB_PAT` | Secret | 第 1 步的 PAT | 调 GitHub API 用 |
 | `TRIGGER_KEY` | Secret | 自定口令 | 手动触发口令，例如 `fgo_9k2mQx7tR4` |
 

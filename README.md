@@ -87,7 +87,7 @@ GitHub Actions 自带的定时任务经常延迟甚至被跳过，这里用 Work
 Worker 有两个入口：
 
 | 入口 | 用途 | 需要鉴权 |
-|---|---|---|---|
+|---|---|---|
 | `Cron Trigger` | 每天自动触发一次 | 否 |
 | `GET /trigger?key=...` | 手动补触发或验证 | 是，`TRIGGER_KEY` |
 
